@@ -32,7 +32,7 @@
     }
   ],
   "require": {
-    "php": "^8.2",
+    "php": "^8.3",
     "myclabs/php-enum": "^1.8",
     "virgil/crypto-wrapper": "^0.17",
     "ext-json": "*"

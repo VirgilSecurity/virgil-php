@@ -1,6 +1,6 @@
 <?php
 /**
- * Copyright (C) 2015-2020 Virgil Security Inc.
+ * Copyright (C) 2015-2024 Virgil Security Inc.
  *
  * All rights reserved.
  *
@@ -53,8 +53,8 @@ use MyCLabs\Enum\Enum;
  */
 class HashAlgorithms extends Enum
 {
-    private const SHA224 = "SHA224";
-    private const SHA256 = "SHA256";
-    private const SHA384 = "SHA384";
-    private const SHA512 = "SHA512";
+    private const string SHA224 = "SHA224";
+    private const string SHA256 = "SHA256";
+    private const string SHA384 = "SHA384";
+    private const string SHA512 = "SHA512";
 }

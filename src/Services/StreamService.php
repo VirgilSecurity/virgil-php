@@ -1,6 +1,6 @@
 <?php
 /**
- * Copyright (C) 2015-2020 Virgil Security Inc.
+ * Copyright (C) 2015-2024 Virgil Security Inc.
  * All rights reserved.
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -44,15 +44,15 @@ class StreamService
      * @param callable $chunkClosure
      * @param bool $withReturn
      */
-    public static function forEachChunk(StreamInterface $stream,
-                                        callable $chunkClosure,
-                                        bool $withReturn = true)
-    {
+    public static function forEachChunk(
+        StreamInterface $stream,
+        callable $chunkClosure,
+        bool $withReturn = true
+    ): void {
         $buffer = "";
         $r = $stream->getInputStream();
 
         while (0 != $r->read($buffer, $stream->getStreamSize())) {
-
             if ($withReturn) {
                 $data = $chunkClosure($buffer);
                 $stream->getOutputStream()->write($data);

@@ -1,6 +1,6 @@
 <?php
 /**
- * Copyright (C) 2015-2020 Virgil Security Inc.
+ * Copyright (C) 2015-2024 Virgil Security Inc.
  * All rights reserved.
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -30,6 +30,8 @@
 
 namespace Virgil\Crypto\Exceptions;
 
+use Exception;
+use InvalidArgumentException;
 use Virgil\Crypto\Core\Enum\VirgilCryptoError;
 
 /**
@@ -42,10 +44,20 @@ class VirgilCryptoException extends VirgilException
     /**
      * VirgilCryptoException constructor.
      *
-     * @param string|VirgilCryptoError|\Exception $error
+     * @param string|VirgilCryptoError|Exception $error
      */
     public function __construct($error)
     {
-        parent::__construct(is_string($error) ? : $error->getMessage(), is_string($error) ? -1 : $error->getCode());
+        if ($error instanceof Exception) {
+            $message = $error->getMessage();
+            $code = $error->getCode();
+        } elseif (is_string($error)) {
+            $message = $error;
+            $code = -1;
+        } else {
+            throw new InvalidArgumentException('Invalid error type provided.');
+        }
+
+        parent::__construct($message, $code);
     }
 }

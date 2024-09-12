@@ -1,6 +1,6 @@
 <?php
 /**
- * Copyright (C) 2015-2020 Virgil Security Inc.
+ * Copyright (C) 2015-2024 Virgil Security Inc.
  * All rights reserved.
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -41,11 +41,6 @@ use Virgil\Crypto\Exceptions\VirgilCryptoException;
 class FileOutputStream implements OutputStream
 {
     /**
-     * @var string
-     */
-    private $output;
-
-    /**
      * @var resource
      */
     private $resource;
@@ -57,13 +52,13 @@ class FileOutputStream implements OutputStream
      *
      * @throws VirgilCryptoException
      */
-    public function __construct(string $output)
+    public function __construct(private string $output)
     {
         $resource = fopen($output, "a");
-        if (!$resource)
+        if (!$resource) {
             throw new VirgilCryptoException(VirgilCryptoError::OUTPUT_STREAM_ERROR());
+        }
 
-        $this->output = $output;
         $this->resource = $resource;
     }
 

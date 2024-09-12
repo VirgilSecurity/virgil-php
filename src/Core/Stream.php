@@ -1,6 +1,6 @@
 <?php
 /**
- * Copyright (C) 2015-2020 Virgil Security Inc.
+ * Copyright (C) 2015-2024 Virgil Security Inc.
  * All rights reserved.
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -42,21 +42,8 @@ use Virgil\Crypto\Exceptions\VirgilCryptoException;
  *
  * @package Virgil\Crypto\Services
  */
-class Stream implements StreamInterface
+readonly class Stream implements StreamInterface
 {
-    /**
-     * @var string
-     */
-    private $input;
-    /**
-     * @var string
-     */
-    private $output;
-    /**
-     * @var int
-     */
-    private $size;
-
     /**
      * Stream constructor.
      *
@@ -64,11 +51,8 @@ class Stream implements StreamInterface
      * @param string $output
      * @param int|null $size
      */
-    public function __construct(string $input, string $output, int $size = null)
+    public function __construct(private string $input, private string $output, private ?int $size = null)
     {
-        $this->input = $input;
-        $this->output = $output;
-        $this->size = $size;
     }
 
     /**

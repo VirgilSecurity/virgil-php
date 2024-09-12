@@ -30,6 +30,7 @@
 
 namespace Virgil\CryptoTests;
 
+use Exception;
 use PHPUnit\Framework\TestCase;
 use Virgil\Crypto\Core\Enum\KeyPairType;
 use Virgil\Crypto\Core\Stream;
@@ -53,8 +54,9 @@ class CryptoTest extends TestCase
     private function unlinkFiles(array $files): void
     {
         foreach ($files as $file) {
-            if (file_exists($file))
+            if (file_exists($file)) {
                 unlink($file);
+            }
         }
     }
 
@@ -64,7 +66,7 @@ class CryptoTest extends TestCase
      *
      * @throws VirgilCryptoException
      */
-    private function checkKeyGeneration(VirgilCrypto $crypto, KeyPairType $keyPairType)
+    private function checkKeyGeneration(VirgilCrypto $crypto, KeyPairType $keyPairType): void
     {
         $keyPair = $crypto->generateKeyPair($keyPairType);
 
@@ -82,16 +84,19 @@ class CryptoTest extends TestCase
         try {
             $crypto = new VirgilCrypto();
 
-            $keyTypes = [KeyPairType::CURVE25519(), KeyPairType::ED25519(), KeyPairType::SECP256R1(),
-                KeyPairType::RSA2048()];
+            $keyTypes = [
+                KeyPairType::CURVE25519(),
+                KeyPairType::ED25519(),
+                KeyPairType::SECP256R1(),
+                KeyPairType::RSA2048()
+            ];
 
             foreach ($keyTypes as $keyType) {
                 $this->checkKeyGeneration($crypto, $keyType);
             }
-        } catch (\Exception $exception) {
+        } catch (Exception $exception) {
             self::fail($this->logException($exception));
         }
-
     }
 
     /**
@@ -100,7 +105,7 @@ class CryptoTest extends TestCase
      *
      * @throws VirgilCryptoException
      */
-    private function checkKeyImport(VirgilCrypto $crypto, KeyPairType $keyPairType)
+    private function checkKeyImport(VirgilCrypto $crypto, KeyPairType $keyPairType): void
     {
         $keyPair = $crypto->generateKeyPair($keyPairType);
         $data1 = $crypto->exportPrivateKey($keyPair->getPrivateKey());
@@ -126,13 +131,17 @@ class CryptoTest extends TestCase
         try {
             $crypto = new VirgilCrypto();
 
-            $keyTypes = [KeyPairType::CURVE25519(), KeyPairType::ED25519(), KeyPairType::SECP256R1(),
-                KeyPairType::RSA2048()];
+            $keyTypes = [
+                KeyPairType::CURVE25519(),
+                KeyPairType::ED25519(),
+                KeyPairType::SECP256R1(),
+                KeyPairType::RSA2048()
+            ];
 
             foreach ($keyTypes as $keyType) {
                 $this->checkKeyImport($crypto, $keyType);
             }
-        } catch (\Exception $exception) {
+        } catch (Exception $exception) {
             self::fail($this->logException($exception));
         }
     }
@@ -141,9 +150,9 @@ class CryptoTest extends TestCase
      * @param VirgilCrypto $crypto
      * @param KeyPairType $keyPairType
      *
-     * @throws \Virgil\Crypto\Exceptions\VirgilCryptoException
+     * @throws VirgilCryptoException
      */
-    private function checkEncryption(VirgilCrypto $crypto, KeyPairType $keyPairType)
+    private function checkEncryption(VirgilCrypto $crypto, KeyPairType $keyPairType): void
     {
         $keyPair1 = $crypto->generateKeyPair($keyPairType);
         $keyPair2 = $crypto->generateKeyPair($keyPairType);
@@ -159,8 +168,8 @@ class CryptoTest extends TestCase
 
         try {
             $tempRes = $crypto->decrypt($encryptedData, $keyPair2->getPrivateKey());
-            self::assertTrue(empty($tempRes));
-        } catch (\Exception $e) {
+            self::assertEmpty($tempRes);
+        } catch (Exception $e) {
             self::assertTrue($e instanceof VirgilCryptoException);
         }
     }
@@ -171,13 +180,17 @@ class CryptoTest extends TestCase
         try {
             $crypto = new VirgilCrypto();
 
-            $keyTypes = [KeyPairType::CURVE25519(), KeyPairType::ED25519(), KeyPairType::SECP256R1(),
-                KeyPairType::RSA2048()];
+            $keyTypes = [
+                KeyPairType::CURVE25519(),
+                KeyPairType::ED25519(),
+                KeyPairType::SECP256R1(),
+                KeyPairType::RSA2048()
+            ];
 
             foreach ($keyTypes as $keyType) {
                 $this->checkEncryption($crypto, $keyType);
             }
-        } catch (\Exception $exception) {
+        } catch (Exception $exception) {
             self::fail($this->logException($exception));
         }
     }
@@ -188,7 +201,7 @@ class CryptoTest extends TestCase
      *
      * @throws VirgilCryptoException
      */
-    private function checkSignature(VirgilCrypto $crypto, KeyPairType $keyPairType)
+    private function checkSignature(VirgilCrypto $crypto, KeyPairType $keyPairType): void
     {
         $keyPair1 = $crypto->generateKeyPair($keyPairType);
         $keyPair2 = $crypto->generateKeyPair($keyPairType);
@@ -202,8 +215,8 @@ class CryptoTest extends TestCase
 
         try {
             $res2 = $crypto->verifySignature($signature, $rawData, $keyPair2->getPublicKey());
-            self::assertTrue(empty($res2));
-        } catch (\Exception $e) {
+            self::assertEmpty($res2);
+        } catch (Exception $e) {
             self::assertTrue($e instanceof VirgilCryptoException);
         }
     }
@@ -219,7 +232,7 @@ class CryptoTest extends TestCase
             foreach ($keyTypes as $keyType) {
                 $this->checkSignature($crypto, $keyType);
             }
-        } catch (\Exception $exception) {
+        } catch (Exception $exception) {
             self::fail($this->logException($exception));
         }
     }
@@ -230,7 +243,7 @@ class CryptoTest extends TestCase
      *
      * @throws VirgilCryptoException
      */
-    private function checkSignAndEncrypt(VirgilCrypto $crypto, KeyPairType $keyPairType)
+    private function checkSignAndEncrypt(VirgilCrypto $crypto, KeyPairType $keyPairType): void
     {
         $data = "test";
 
@@ -251,15 +264,15 @@ class CryptoTest extends TestCase
 
         try {
             $res1 = $crypto->decryptAndVerify($encrypted, $keyPair3->getPrivateKey(), $pkl1);
-            self::assertTrue(empty($res1));
-        } catch (\Exception $e) {
+            self::assertEmpty($res1);
+        } catch (Exception $e) {
             self::assertTrue($e instanceof VirgilCryptoException);
         }
 
         try {
             $res2 = $crypto->decryptAndVerify($encrypted, $keyPair2->getPrivateKey(), $pkl2);
-            self::assertTrue(empty($res2));
-        } catch (\Exception $e) {
+            self::assertEmpty($res2);
+        } catch (Exception $e) {
             self::assertTrue($e instanceof VirgilCryptoException);
         }
     }
@@ -275,7 +288,7 @@ class CryptoTest extends TestCase
             foreach ($keyTypes as $keyType) {
                 $this->checkSignAndEncrypt($crypto, $keyType);
             }
-        } catch (\Exception $exception) {
+        } catch (Exception $exception) {
             self::fail($this->logException($exception));
         }
     }
@@ -286,7 +299,7 @@ class CryptoTest extends TestCase
      *
      * @throws VirgilCryptoException
      */
-    private function checkStreamSign(VirgilCrypto $crypto, KeyPairType $keyPairType)
+    private function checkStreamSign(VirgilCrypto $crypto, KeyPairType $keyPairType): void
     {
         $keyPair1 = $crypto->generateKeyPair($keyPairType);
         $keyPair2 = $crypto->generateKeyPair($keyPairType);
@@ -307,8 +320,8 @@ class CryptoTest extends TestCase
 
         try {
             $res2 = $crypto->verifyStreamSignature($signature, $verifyStream2, $keyPair2->getPublicKey());
-            self::assertTrue(empty($res2));
-        } catch (\Exception $e) {
+            self::assertEmpty($res2);
+        } catch (Exception $e) {
             self::assertTrue($e instanceof VirgilCryptoException);
         }
 
@@ -326,7 +339,7 @@ class CryptoTest extends TestCase
             foreach ($keyTypes as $keyType) {
                 $this->checkStreamSign($crypto, $keyType);
             }
-        } catch (\Exception $exception) {
+        } catch (Exception $exception) {
             self::fail($this->logException($exception));
         }
     }
@@ -337,7 +350,7 @@ class CryptoTest extends TestCase
      *
      * @throws VirgilCryptoException
      */
-    private function checkStreamEncryption(VirgilCrypto $crypto, KeyPairType $keyPairType)
+    private function checkStreamEncryption(VirgilCrypto $crypto, KeyPairType $keyPairType): void
     {
         $keyPair1 = $crypto->generateKeyPair($keyPairType);
         $keyPair2 = $crypto->generateKeyPair($keyPairType);
@@ -367,8 +380,8 @@ class CryptoTest extends TestCase
 
         try {
             $res = $crypto->decrypt($stream2, $keyPair2->getPrivateKey());
-            self::assertTrue(empty($res));
-        } catch (\Exception $e) {
+            self::assertEmpty($res);
+        } catch (Exception $e) {
             self::assertTrue($e instanceof VirgilCryptoException);
         }
 
@@ -381,12 +394,17 @@ class CryptoTest extends TestCase
         try {
             $crypto = new VirgilCrypto();
 
-            $keyTypes = [KeyPairType::CURVE25519(), KeyPairType::ED25519(), KeyPairType::SECP256R1(), KeyPairType::RSA2048()];
+            $keyTypes = [
+                KeyPairType::CURVE25519(),
+                KeyPairType::ED25519(),
+                KeyPairType::SECP256R1(),
+                KeyPairType::RSA2048()
+            ];
 
             foreach ($keyTypes as $keyType) {
                 $this->checkStreamEncryption($crypto, $keyType);
             }
-        } catch (\Exception $exception) {
+        } catch (Exception $exception) {
             self::fail($this->logException($exception));
         }
     }
@@ -397,7 +415,7 @@ class CryptoTest extends TestCase
      *
      * @throws VirgilCryptoException
      */
-    private function checkGenerateKeyUsingSeed(VirgilCrypto $crypto, KeyPairType $keyPairType)
+    private function checkGenerateKeyUsingSeed(VirgilCrypto $crypto, KeyPairType $keyPairType): void
     {
         $seed = $crypto->generateRandomData(32);
 
@@ -420,12 +438,17 @@ class CryptoTest extends TestCase
         try {
             $crypto = new VirgilCrypto();
 
-            $keyTypes = [KeyPairType::CURVE25519(), KeyPairType::ED25519(), KeyPairType::SECP256R1(), KeyPairType::RSA2048()];
+            $keyTypes = [
+                KeyPairType::CURVE25519(),
+                KeyPairType::ED25519(),
+                KeyPairType::SECP256R1(),
+                KeyPairType::RSA2048()
+            ];
 
             foreach ($keyTypes as $keyType) {
                 $this->checkGenerateKeyUsingSeed($crypto, $keyType);
             }
-        } catch (\Exception $exception) {
+        } catch (Exception $exception) {
             self::fail($this->logException($exception));
         }
     }
@@ -436,7 +459,7 @@ class CryptoTest extends TestCase
      *
      * @throws VirgilCryptoException
      */
-    private function checkKeyExportImport(VirgilCrypto $crypto, KeyPairType $keyPairType)
+    private function checkKeyExportImport(VirgilCrypto $crypto, KeyPairType $keyPairType): void
     {
         $keyPair = $crypto->generateKeyPair($keyPairType);
         $publicKeyData = $crypto->exportPublicKey($keyPair->getPublicKey());
@@ -463,7 +486,7 @@ class CryptoTest extends TestCase
             foreach ($keyTypes as $keyType) {
                 $this->checkKeyExportImport($crypto, $keyType);
             }
-        } catch (\Exception $exception) {
+        } catch (Exception $exception) {
             self::fail($this->logException($exception));
         }
     }
@@ -474,7 +497,7 @@ class CryptoTest extends TestCase
      *
      * @throws VirgilCryptoException
      */
-    private function checkAuthEncrypt(VirgilCrypto $crypto, KeyPairType $keyPairType)
+    private function checkAuthEncrypt(VirgilCrypto $crypto, KeyPairType $keyPairType): void
     {
         $keyPair1 = $crypto->generateKeyPair($keyPairType);
         $keyPair2 = $crypto->generateKeyPair($keyPairType);
@@ -493,16 +516,16 @@ class CryptoTest extends TestCase
 
         try {
             $res1 = $crypto->authDecrypt($encrypted, $keyPair3->getPrivateKey(), $pkl2);
-            self::assertTrue(empty($res1));
-        } catch (\Exception $e) {
+            self::assertEmpty($res1);
+        } catch (Exception $e) {
             self::assertTrue($e instanceof VirgilCryptoException);
         }
 
         try {
             $pkl3 = new VirgilPublicKeyCollection($keyPair3->getPublicKey());
             $res2 = $crypto->authDecrypt($encrypted, $keyPair2->getPrivateKey(), $pkl3);
-            self::assertTrue(empty($res2));
-        } catch (\Exception $e) {
+            self::assertEmpty($res2);
+        } catch (Exception $e) {
             self::assertTrue($e instanceof VirgilCryptoException);
         }
     }
@@ -518,10 +541,9 @@ class CryptoTest extends TestCase
             foreach ($keyTypes as $keyType) {
                 $this->checkAuthEncrypt($crypto, $keyType);
             }
-        } catch (\Exception $exception) {
+        } catch (Exception $exception) {
             self::fail($this->logException($exception));
         }
-
     }
 
     /**
@@ -530,7 +552,7 @@ class CryptoTest extends TestCase
      *
      * @throws VirgilCryptoException
      */
-    private function checkAuthEncryptStream(VirgilCrypto $crypto, KeyPairType $keyPairType)
+    private function checkAuthEncryptStream(VirgilCrypto $crypto, KeyPairType $keyPairType): void
     {
         $keyPair1 = $crypto->generateKeyPair($keyPairType);
         $keyPair2 = $crypto->generateKeyPair($keyPairType);
@@ -561,15 +583,15 @@ class CryptoTest extends TestCase
 
         try {
             $res1 = $crypto->authDecrypt($stream2, $keyPair3->getPrivateKey(), $pkl);
-            self::assertTrue(empty($res1));
-        } catch (\Exception $e) {
+            self::assertEmpty($res1);
+        } catch (Exception $e) {
             self::assertTrue($e instanceof VirgilCryptoException);
         }
 
         try {
             $res2 = $crypto->authDecrypt($stream3, $keyPair2->getPrivateKey(), $pkl3);
-            self::assertTrue(empty($res2));
-        } catch (\Exception $e) {
+            self::assertEmpty($res2);
+        } catch (Exception $e) {
             self::assertTrue($e instanceof VirgilCryptoException);
         }
 
@@ -587,7 +609,7 @@ class CryptoTest extends TestCase
             foreach ($keyTypes as $keyType) {
                 $this->checkAuthEncryptStream($crypto, $keyType);
             }
-        } catch (\Exception $exception) {
+        } catch (Exception $exception) {
             self::fail($this->logException($exception));
         }
     }
@@ -598,7 +620,7 @@ class CryptoTest extends TestCase
      *
      * @throws VirgilCryptoException
      */
-    private function checkAuthEncryptDeprecated(VirgilCrypto $crypto, KeyPairType $keyPairType)
+    private function checkAuthEncryptDeprecated(VirgilCrypto $crypto, KeyPairType $keyPairType): void
     {
         $data = "test";
 
@@ -629,7 +651,7 @@ class CryptoTest extends TestCase
             foreach ($keyTypes as $keyType) {
                 $this->checkAuthEncryptDeprecated($crypto, $keyType);
             }
-        } catch (\Exception $exception) {
+        } catch (Exception $exception) {
             self::fail($this->logException($exception));
         }
     }

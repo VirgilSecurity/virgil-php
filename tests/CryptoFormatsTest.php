@@ -30,6 +30,7 @@
 
 namespace Virgil\CryptoTests;
 
+use Exception;
 use PHPUnit\Framework\TestCase;
 use Virgil\Crypto\Core\Enum\HashAlgorithms;
 use Virgil\Crypto\VirgilCrypto;
@@ -53,7 +54,7 @@ class CryptoFormatsTest extends TestCase
             $signature = $crypto->generateSignature("test", $keyPair->getPrivateKey());
 
             self::assertEquals(substr($signature, 0, 17), base64_decode("MFEwDQYJYIZIAWUDBAIDBQA="));
-        } catch (\Exception $exception) {
+        } catch (Exception $exception) {
             self::fail($this->logException($exception));
         }
     }
@@ -67,11 +68,15 @@ class CryptoFormatsTest extends TestCase
 
             self::assertEquals($keyPair1->getPrivateKey()->getIdentifier(), $keyPair1->getPublicKey()->getIdentifier());
 
-            $a1 = substr($crypto1->computeHash($crypto1->exportPublicKey($keyPair1->getPublicKey()), HashAlgorithms::SHA512()),0, 8);
+            $a1 = substr(
+                $crypto1->computeHash($crypto1->exportPublicKey($keyPair1->getPublicKey()), HashAlgorithms::SHA512()),
+                0,
+                8
+            );
             $a2 = $keyPair1->getPrivateKey()->getIdentifier();
 
-            self::assertEquals(strlen($a1), 8);
-            self::assertEquals(strlen($a2), 8);
+            self::assertEquals(8, strlen($a1));
+            self::assertEquals(8, strlen($a2));
             self::assertEquals($a1, $a2);
 
             $crypto2 = new VirgilCrypto(null, true);
@@ -80,10 +85,10 @@ class CryptoFormatsTest extends TestCase
             $b1 = $crypto1->computeHash($crypto1->exportPublicKey($keyPair2->getPublicKey()), HashAlgorithms::SHA256());
             $b2 = $keyPair2->getPrivateKey()->getIdentifier();
 
-            self::assertEquals(strlen($b1), 32);
-            self::assertEquals(strlen($b2), 32);
+            self::assertEquals(32, strlen($b1));
+            self::assertEquals(32, strlen($b2));
             self::assertEquals($b1, $b2);
-        } catch (\Exception $exception) {
+        } catch (Exception $exception) {
             self::fail($this->logException($exception));
         }
     }

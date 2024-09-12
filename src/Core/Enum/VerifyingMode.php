@@ -1,6 +1,6 @@
 <?php
 /**
- * Copyright (C) 2015-2020 Virgil Security Inc.
+ * Copyright (C) 2015-2024 Virgil Security Inc.
  * All rights reserved.
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -43,7 +43,7 @@ use MyCLabs\Enum\Enum;
  */
 class VerifyingMode extends Enum
 {
-    private const DECRYPT_AND_VERIFY = "DECRYPT_AND_VERIFY";
-    private const DECRYPT_THEN_VERIFY = "DECRYPT_THEN_VERIFY";
-    private const ANY = "ANY";
+    private const string DECRYPT_AND_VERIFY = "DECRYPT_AND_VERIFY";
+    private const string DECRYPT_THEN_VERIFY = "DECRYPT_THEN_VERIFY";
+    private const string ANY = "ANY";
 }

@@ -1,6 +1,6 @@
 <?php
 /**
- * Copyright (C) 2015-2020 Virgil Security Inc.
+ * Copyright (C) 2015-2024 Virgil Security Inc.
  *
  * All rights reserved.
  *
@@ -57,12 +57,12 @@ use Virgil\CryptoWrapper\Foundation\AlgId;
  */
 class KeyPairType extends Enum
 {
-    private const ED25519 = "ED25519";
-    private const CURVE25519 = "CURVE25519";
-    private const SECP256R1 = "SECP256R1";
-    private const RSA2048 = "RSA2048";
-    private const RSA4096 = "RSA4096";
-    private const RSA8192 = "RSA8192";
+    private const string ED25519 = "ED25519";
+    private const string CURVE25519 = "CURVE25519";
+    private const string SECP256R1 = "SECP256R1";
+    private const string RSA2048 = "RSA2048";
+    private const string RSA4096 = "RSA4096";
+    private const string RSA8192 = "RSA8192";
 
     /**
      * @param KeyPairType $keyPairType
@@ -71,21 +71,12 @@ class KeyPairType extends Enum
      */
     public function getRsaBitLen(KeyPairType $keyPairType): ?int
     {
-        switch ($keyPairType) {
-            case $keyPairType::RSA2048():
-                $res = 2048;
-                break;
-            case $keyPairType::RSA4096():
-                $res = 4096;
-                break;
-            case $keyPairType::RSA8192():
-                $res = 8192;
-                break;
-            default:
-                $res =  null;
-        }
-
-        return $res;
+        return match ((string)$keyPairType) {
+            (string)$keyPairType::RSA2048() => 2048,
+            (string)$keyPairType::RSA4096() => 4096,
+            (string)$keyPairType::RSA8192() => 8192,
+            default => null,
+        };
     }
 
     /**
@@ -96,21 +87,12 @@ class KeyPairType extends Enum
      */
     public static function getRsaKeyType(int $bitLen): KeyPairType
     {
-        switch ($bitLen) {
-            case 2048:
-                $res = KeyPairType::RSA2048();
-                break;
-            case 4096:
-                $res = KeyPairType::RSA4096();
-                break;
-            case 8192:
-                $res =  KeyPairType::RSA8192();
-                break;
-            default:
-                throw new VirgilCryptoException(VirgilCryptoError::UNSUPPORTED_RSA_LENGTH());
-        }
-
-        return $res;
+        return match ($bitLen) {
+            2048 => KeyPairType::RSA2048(),
+            4096 => KeyPairType::RSA4096(),
+            8192 => KeyPairType::RSA8192(),
+            default => throw new VirgilCryptoException(VirgilCryptoError::UNSUPPORTED_RSA_LENGTH()),
+        };
     }
 
     /**
@@ -121,23 +103,15 @@ class KeyPairType extends Enum
      */
     public static function getFromAlgId(AlgId $algId): KeyPairType
     {
-        switch ($algId) {
-            case $algId::ED25519():
-                $res = KeyPairType::ED25519();
-                break;
-            case $algId::CURVE25519():
-                $res = KeyPairType::CURVE25519();
-                break;
-            case $algId::SECP256R1():
-                $res = KeyPairType::SECP256R1();
-                break;
-            case $algId::RSA():
-                throw new VirgilCryptoException(VirgilCryptoError::RSA_SHOULD_BE_CONSTRUCTED_DIRECTLY());
-            default:
-                throw new VirgilCryptoException(VirgilCryptoError::UNKNOWN_ALG_ID());
-        }
-
-        return $res;
+        return match ((string)$algId) {
+            (string)$algId::ED25519() => KeyPairType::ED25519(),
+            (string)$algId::CURVE25519() => KeyPairType::CURVE25519(),
+            (string)$algId::SECP256R1() => KeyPairType::SECP256R1(),
+            (string)$algId::RSA() => throw new VirgilCryptoException(
+                VirgilCryptoError::RSA_SHOULD_BE_CONSTRUCTED_DIRECTLY()
+            ),
+            default => throw new VirgilCryptoException(VirgilCryptoError::UNKNOWN_ALG_ID()),
+        };
     }
 
     /**
@@ -148,26 +122,13 @@ class KeyPairType extends Enum
      */
     public function getAlgId(KeyPairType $keyPairType): AlgId
     {
-        switch ($keyPairType) {
-            case $keyPairType::ED25519():
-                $res = AlgId::ED25519();
-                break;
-            case $keyPairType::CURVE25519():
-                $res = AlgId::CURVE25519();
-                break;
-            case $keyPairType::SECP256R1():
-                $res = AlgId::SECP256R1();
-                break;
-            case $keyPairType::RSA2048():
-            case $keyPairType::RSA4096():
-            case $keyPairType::RSA8192():
-                $res = AlgId::RSA();
-                break;
-            default:
-                throw new VirgilCryptoException(VirgilCryptoError::UNKNOWN_ALG_ID());
-        }
-
-        return $res;
+        return match ((string)$keyPairType) {
+            (string)$keyPairType::ED25519() => AlgId::ED25519(),
+            (string)$keyPairType::CURVE25519() => AlgId::CURVE25519(),
+            (string)$keyPairType::SECP256R1() => AlgId::SECP256R1(),
+            (string)$keyPairType::RSA2048(), (string)$keyPairType::RSA4096(), (string)$keyPairType::RSA8192(
+            ) => AlgId::RSA(),
+            default => throw new VirgilCryptoException(VirgilCryptoError::UNKNOWN_ALG_ID()),
+        };
     }
-
 }

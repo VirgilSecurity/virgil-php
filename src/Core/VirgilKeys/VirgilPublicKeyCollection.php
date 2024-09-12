@@ -1,6 +1,6 @@
 <?php
 /**
- * Copyright (C) 2015-2020 Virgil Security Inc.
+ * Copyright (C) 2015-2024 Virgil Security Inc.
  * All rights reserved.
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -40,7 +40,7 @@ class VirgilPublicKeyCollection
     /**
      * @var array
      */
-    private $collection = [];
+    private array $collection = [];
 
     /**
      * PublicKeyList constructor.
@@ -49,8 +49,9 @@ class VirgilPublicKeyCollection
      */
     public function __construct(VirgilPublicKey ...$publicKey)
     {
-        if ($publicKey)
+        if ($publicKey) {
             array_push($this->collection, ...$publicKey);
+        }
     }
 
     /**
@@ -89,10 +90,18 @@ class VirgilPublicKeyCollection
      * @param VirgilPublicKeyCollection $virgilPublicKeyCollection
      *
      */
-    public function addCollection(VirgilPublicKeyCollection $virgilPublicKeyCollection)
+    public function addCollection(VirgilPublicKeyCollection $virgilPublicKeyCollection): void
     {
         foreach ($virgilPublicKeyCollection->getAsArray() as $virgilPublicKey) {
             $this->collection[] = $virgilPublicKey;
         }
+    }
+
+    /**
+     * @return bool
+     */
+    public function isEmpty(): bool
+    {
+        return empty($this->collection);
     }
 }

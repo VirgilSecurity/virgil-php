@@ -45,9 +45,9 @@ namespace Virgil\CryptoTests\Utils;
 class CompatibilityDataProvider
 {
     /**
-     * @var string
+     * @var mixed
      */
-    private $jsonData;
+    private mixed $jsonData;
 
     /**
      * CompatibilityDataProvider constructor.

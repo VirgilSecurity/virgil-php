@@ -1,6 +1,6 @@
 <?php
 /**
- * Copyright (C) 2015-2020 Virgil Security Inc.
+ * Copyright (C) 2015-2024 Virgil Security Inc.
  *
  * All rights reserved.
  *
@@ -45,25 +45,13 @@ namespace Virgil\Crypto\Core\VirgilKeys;
 class VirgilKeyPair
 {
     /**
-     * @var VirgilPrivateKey
-     */
-    private $privateKey;
-
-    /**
-     * @var VirgilPublicKey
-     */
-    private $publicKey;
-
-    /**
      * VirgilKeyPair constructor.
      *
      * @param VirgilPrivateKey $privateKey*
      * @param VirgilPublicKey  $publicKey
      */
-    public function __construct(VirgilPrivateKey $privateKey, VirgilPublicKey $publicKey)
+    public function __construct(private VirgilPrivateKey $privateKey, private VirgilPublicKey $publicKey)
     {
-        $this->privateKey = $privateKey;
-        $this->publicKey = $publicKey;
     }
 
     /**

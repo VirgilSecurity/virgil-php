@@ -30,6 +30,8 @@
 
 namespace Virgil\CryptoTests\Utils;
 
+use Exception;
+
 /**
  * Trait ExceptionLogger
  *
@@ -38,14 +40,20 @@ namespace Virgil\CryptoTests\Utils;
 trait ExceptionLogger
 {
     /**
-     * @param \Exception $exception
+     * @param Exception $exception
      *
      * @return string
      */
-    public function logException(\Exception $exception): string
+    public function logException(Exception $exception): string
     {
-        return printf("\nException: %s\nMessage: %s\nCode: %s\nFile: %s:%s", get_class($exception),
-            $exception->getMessage
-        (), $exception->getCode(), $exception->getFile(), $exception->getLine()) ;
+        return printf(
+            "\nException: %s\nMessage: %s\nCode: %s\nFile: %s:%s",
+            get_class($exception),
+            $exception->getMessage(
+            ),
+            $exception->getCode(),
+            $exception->getFile(),
+            $exception->getLine()
+        ) ;
     }
 }

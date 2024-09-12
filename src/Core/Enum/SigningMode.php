@@ -1,6 +1,6 @@
 <?php
 /**
- * Copyright (C) 2015-2020 Virgil Security Inc.
+ * Copyright (C) 2015-2024 Virgil Security Inc.
  * All rights reserved.
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -42,6 +42,6 @@ use MyCLabs\Enum\Enum;
  */
 class SigningMode extends Enum
 {
-    private const SIGN_AND_ENCRYPT = "SIGN_AND_ENCRYPT";
-    private const SIGN_THEN_ENCRYPT = "SIGN_THEN_ENCRYPT";
+    private const string SIGN_AND_ENCRYPT = "SIGN_AND_ENCRYPT";
+    private const string SIGN_THEN_ENCRYPT = "SIGN_THEN_ENCRYPT";
 }

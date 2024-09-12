@@ -1,6 +1,6 @@
 <?php
 /**
- * Copyright (C) 2015-2020 Virgil Security Inc.
+ * Copyright (C) 2015-2024 Virgil Security Inc.
  * All rights reserved.
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -38,17 +38,8 @@ use Virgil\Crypto\Core\VirgilKeys\VirgilPrivateKey;
  *
  * @package Virgil\Crypto\Services
  */
-class SigningOptions
+readonly class SigningOptions
 {
-    /**
-     * @var VirgilPrivateKey
-     */
-    private $virgilPrivateKey;
-
-    /**
-     * @var SigningMode
-     */
-    private $signingMode;
 
     /**
      * SigningOptions constructor.
@@ -56,10 +47,8 @@ class SigningOptions
      * @param VirgilPrivateKey $virgilPrivateKey
      * @param SigningMode $signingMode
      */
-    public function __construct(VirgilPrivateKey $virgilPrivateKey, SigningMode $signingMode)
+    public function __construct(private VirgilPrivateKey $virgilPrivateKey, private SigningMode $signingMode)
     {
-        $this->virgilPrivateKey = $virgilPrivateKey;
-        $this->signingMode = $signingMode;
     }
 
     /**
@@ -77,5 +66,4 @@ class SigningOptions
     {
         return $this->signingMode;
     }
-
 }

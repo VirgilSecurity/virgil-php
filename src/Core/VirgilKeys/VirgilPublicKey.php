@@ -1,6 +1,6 @@
 <?php
 /**
- * Copyright (C) 2015-2020 Virgil Security Inc.
+ * Copyright (C) 2015-2024 Virgil Security Inc.
  *
  * All rights reserved.
  *
@@ -48,32 +48,14 @@ use Virgil\CryptoWrapper\Foundation\PublicKey;
 class VirgilPublicKey
 {
     /**
-     * @var string
-     */
-    private $identifier;
-
-    /**
-     * @var PublicKey
-     */
-    private $publicKey;
-
-    /**
-     * @var KeyPairType
-     */
-    private $keyType;
-
-    /**
      * VirgilPublicKey constructor.
      *
      * @param string $identifier
      * @param PublicKey $publicKey
      * @param KeyPairType $keyType
      */
-    public function __construct(string $identifier, PublicKey $publicKey, KeyPairType $keyType)
+    public function __construct(private string $identifier, private PublicKey $publicKey, private KeyPairType $keyType)
     {
-        $this->identifier = $identifier;
-        $this->publicKey = $publicKey;
-        $this->keyType = $keyType;
     }
 
     /**

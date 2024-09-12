@@ -1,6 +1,6 @@
 <?php
 /**
- * Copyright (C) 2015-2020 Virgil Security Inc.
+ * Copyright (C) 2015-2024 Virgil Security Inc.
  *
  * All rights reserved.
  *
@@ -37,12 +37,14 @@
 
 namespace Virgil\Crypto\Exceptions;
 
+use Exception;
+
 /**
  * Class VirgilException
  *
  * @package Virgil\Crypto\Exceptions
  */
-class VirgilException extends \Exception
+class VirgilException extends Exception
 {
 
 }
