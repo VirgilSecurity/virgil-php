@@ -34,7 +34,7 @@
   "require": {
     "php": "^8.3",
     "myclabs/php-enum": "^1.8",
-    "virgil/crypto-wrapper": "^0.17",
+    "virgil/crypto-wrapper": "^0.17.2",
     "ext-json": "*"
   },
   "require-dev": {
