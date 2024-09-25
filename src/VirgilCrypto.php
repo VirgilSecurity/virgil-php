@@ -108,11 +108,7 @@ class VirgilCrypto
      */
     private function getCryptoService(): VirgilCryptoService
     {
-        return new VirgilCryptoService(
-            $this->defaultKeyType,
-            $this->useSHA256Fingerprints,
-            $this->rng
-        );
+        return new VirgilCryptoService($this->defaultKeyType, $this->useSHA256Fingerprints, $this->chunkSize, $this->rng);
     }
 
 

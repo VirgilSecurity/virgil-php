@@ -67,6 +67,26 @@ use Virgil\CryptoWrapper\Foundation\Verifier;
  */
 class VirgilCryptoService
 {
+    /**
+     * @var KeyPairType
+     */
+    private KeyPairType $defaultKeyType;
+
+    /**
+     * @var bool
+     */
+    private bool $useSHA256Fingerprints;
+
+    /**
+     * @var int
+     */
+    private int $chunkSize;
+
+    /**
+     * @var Random
+     */
+    private Random $rng;
+
     private const string CUSTOM_PARAM_KEY_SIGNATURE = "VIRGIL-DATA-SIGNATURE";
     private const string CUSTOM_PARAM_KEY_SIGNER_ID = "VIRGIL-DATA-SIGNER-ID";
 
@@ -75,13 +95,15 @@ class VirgilCryptoService
      *
      * @param KeyPairType $defaultKeyType
      * @param bool $useSHA256Fingerprints
+     * @param int $chunkSize
      * @param Random $rng
      */
-    public function __construct(
-        private readonly KeyPairType $defaultKeyType,
-        private readonly bool $useSHA256Fingerprints,
-        private readonly Random $rng
-    ) {
+    public function __construct(KeyPairType $defaultKeyType, bool $useSHA256Fingerprints, int $chunkSize, Random $rng)
+    {
+        $this->defaultKeyType = $defaultKeyType;
+        $this->useSHA256Fingerprints = $useSHA256Fingerprints;
+        $this->chunkSize = $chunkSize;
+        $this->rng = $rng;
     }
 
     /**
@@ -237,251 +259,141 @@ class VirgilCryptoService
         RecipientCipher $cipher,
         mixed $inputOutput,
         SigningOptions $signingOptions = null
-    ): void {
+    ): void
+    {
         try {
             if ($signingOptions) {
-                $this->handleSigningOptions($cipher, $inputOutput, $signingOptions);
+                $signingMode = $signingOptions->getSigningMode();
+
+                $virgilPrivateKey = $signingOptions->getVirgilPrivateKey();
+                switch ($signingMode) {
+                    case $signingMode::SIGN_AND_ENCRYPT():
+
+                        if (is_string($inputOutput)) {
+                                $signature = $this->generateSignature($inputOutput, $virgilPrivateKey);
+                                $cipher->customParams()->addData(self::CUSTOM_PARAM_KEY_SIGNATURE, $signature);
+                                $cipher->customParams()->addData(self::CUSTOM_PARAM_KEY_SIGNER_ID,
+                                    $virgilPrivateKey->getIdentifier());
+                        } else {
+                            throw new VirgilCryptoException("signAndEncrypt is supported only for strings");
+                        }
+
+                        $cipher->startEncryption();
+                        break;
+
+                    case $signingMode::SIGN_THEN_ENCRYPT():
+
+                        $cipher->useSignerHash(new Sha512());
+                        $cipher->addSigner($virgilPrivateKey->getIdentifier(), $virgilPrivateKey->getPrivateKey());
+
+                        $size = null;
+
+
+                         if (is_string($inputOutput)) {
+
+                                $size = strlen($inputOutput);
+
+                         } else if ($inputOutput instanceof StreamInterface) {
+
+                                if (!$inputOutput->getStreamSize()) {
+                                    $error = "signThenEncrypt for streams with unknown size is not supported";
+                                    throw new VirgilCryptoException($error);
+                                }
+
+                                $size = $inputOutput->getStreamSize();
+                        } else {
+                            throw new VirgilCryptoException("Unsupported inputOutput type");
+                        }
+
+                        $cipher->startSignedEncryption($size);
+                        break;
+                }
+
             } else {
                 $cipher->startEncryption();
             }
+
         } catch (Exception $e) {
+            print($e);
             throw new VirgilCryptoException($e);
         }
     }
 
     /**
-     * Handle signing options for encryption.
-     *
      * @param RecipientCipher $cipher
-     * @param mixed $inputOutput
-     * @param SigningOptions $signingOptions
-     * @throws VirgilCryptoException
-     */
-    private function handleSigningOptions(
-        RecipientCipher $cipher,
-        mixed $inputOutput,
-        SigningOptions $signingOptions
-    ): void {
-        $signingMode = $signingOptions->getSigningMode();
-
-        switch ($signingMode) {
-            case $signingMode::SIGN_AND_ENCRYPT():
-                $this->handleSignAndEncrypt($cipher, $inputOutput, $signingOptions);
-                break;
-
-            case $signingMode::SIGN_THEN_ENCRYPT():
-                $this->handleSignThenEncrypt($cipher, $inputOutput, $signingOptions);
-                break;
-        }
-    }
-
-    /**
-     * Handle sign and encrypt mode.
-     *
-     * @param RecipientCipher $cipher
-     * @param mixed $inputOutput
-     * @param SigningOptions $signingOptions
-     * @throws VirgilCryptoException
-     * @throws Exception
-     */
-    private function handleSignAndEncrypt(
-        RecipientCipher $cipher,
-        mixed $inputOutput,
-        SigningOptions $signingOptions
-    ): void {
-        if (!is_string($inputOutput)) {
-            throw new VirgilCryptoException("signAndEncrypt is supported only for strings");
-        }
-
-        $signature = $this->generateSignature($inputOutput, $signingOptions->getVirgilPrivateKey());
-        $cipher->customParams()->addData(self::CUSTOM_PARAM_KEY_SIGNATURE, $signature);
-        $cipher->customParams()->addData(
-            self::CUSTOM_PARAM_KEY_SIGNER_ID,
-            $signingOptions->getVirgilPrivateKey()->getIdentifier()
-        );
-
-        $cipher->startEncryption();
-    }
-
-    /**
-     * Handle sign then encrypt mode.
-     *
-     * @param RecipientCipher $cipher
-     * @param mixed $inputOutput
-     * @param SigningOptions $signingOptions
-     * @throws VirgilCryptoException
-     * @throws Exception
-     */
-    private function handleSignThenEncrypt(
-        RecipientCipher $cipher,
-        mixed $inputOutput,
-        SigningOptions $signingOptions
-    ): void {
-        $cipher->useSignerHash(new Sha512());
-        $cipher->addSigner(
-            $signingOptions->getVirgilPrivateKey()->getIdentifier(),
-            $signingOptions->getVirgilPrivateKey()->getPrivateKey()
-        );
-
-        $size = $this->getInputSize($inputOutput);
-
-        if ($size === null) {
-            throw new VirgilCryptoException("Unsupported inputOutput type");
-        }
-
-        $cipher->startSignedEncryption($size);
-    }
-
-    /**
-     * Get the size of the input.
-     *
-     * @param mixed $inputOutput
-     * @return int|null
-     * @throws VirgilCryptoException
-     */
-    private function getInputSize(mixed $inputOutput): ?int
-    {
-        if (is_string($inputOutput)) {
-            return strlen($inputOutput);
-        } elseif ($inputOutput instanceof StreamInterface) {
-            if (!$inputOutput->getStreamSize()) {
-                throw new VirgilCryptoException("signThenEncrypt for streams with unknown size is not supported");
-            }
-            return $inputOutput->getStreamSize();
-        }
-        return null;
-    }
-
-
-    /**
-     * @param RecipientCipher $cipher
-     * @param mixed $inputOutput
+     * @param $inputOutput
      * @param SigningOptions|null $signingOptions
      *
      * @return null|string
      * @throws VirgilCryptoException
      */
-    private function processEncryption(
-        RecipientCipher $cipher,
-        mixed $inputOutput,
-        SigningOptions $signingOptions = null
-    ): ?string {
+    private function processEncryption(RecipientCipher $cipher, $inputOutput, SigningOptions $signingOptions = null)
+    {
         try {
+            $result = null;
+
             if (is_string($inputOutput)) {
-                return $this->processStringEncryption($cipher, $inputOutput, $signingOptions);
-            } elseif ($inputOutput instanceof StreamInterface) {
-                return $this->processStreamEncryption($cipher, $inputOutput, $signingOptions);
+                    $result = $cipher->packMessageInfo();
+                    $result .= $cipher->processEncryption($inputOutput);
+                    $result .= $cipher->finishEncryption();
+
+                    if (($signingOptions) && ($signingOptions->getSigningMode() == SigningMode::SIGN_THEN_ENCRYPT())) {
+                        $result .= $cipher->packMessageInfoFooter();
+                    }
+
+
+            } else if ($inputOutput instanceof StreamInterface) {
+                    $inputOutput->getOutputStream()->write($cipher->packMessageInfo());
+
+                    $chunkClosure = function ($chunk) use ($cipher) { return $cipher->processEncryption($chunk); };
+                    StreamService::forEachChunk($inputOutput, $chunkClosure, true);
+
+                    $inputOutput->getOutputStream()->write($cipher->finishEncryption());
+
+                    if ($signingOptions && ($signingOptions->getSigningMode() == SigningMode::SIGN_THEN_ENCRYPT())) {
+                        $inputOutput->getOutputStream()->write($cipher->packMessageInfoFooter());
+                    }
             } else {
                 throw new VirgilCryptoException("Unsupported inputOutput type");
             }
+
+            return $result;
+
         } catch (Exception $e) {
             throw new VirgilCryptoException($e);
         }
     }
 
     /**
-     * Process encryption for string input.
-     *
-     * @param RecipientCipher $cipher
-     * @param string $input
-     * @param SigningOptions|null $signingOptions
-     * @return string|null
-     * @throws Exception
-     */
-    private function processStringEncryption(
-        RecipientCipher $cipher,
-        string $input,
-        SigningOptions $signingOptions = null
-    ): ?string {
-        $result = $cipher->packMessageInfo();
-        $result .= $cipher->processEncryption($input);
-        $result .= $cipher->finishEncryption();
-
-        if ($signingOptions && $signingOptions->getSigningMode() === SigningMode::SIGN_THEN_ENCRYPT()) {
-            $result .= $cipher->packMessageInfoFooter();
-        }
-
-        return $result;
-    }
-
-    /**
-     * Process encryption for stream input.
-     *
-     * @param RecipientCipher $cipher
-     * @param StreamInterface $inputOutput
-     * @param SigningOptions|null $signingOptions
-     * @return string|null
-     * @throws Exception
-     */
-    private function processStreamEncryption(
-        RecipientCipher $cipher,
-        StreamInterface $inputOutput,
-        SigningOptions
-        $signingOptions = null
-    ): ?string {
-        $inputOutput->getOutputStream()->write($cipher->packMessageInfo());
-
-        $chunkClosure = function ($chunk) use ($cipher) {
-            return $cipher->processEncryption($chunk);
-        };
-        StreamService::forEachChunk($inputOutput, $chunkClosure, true);
-
-        $inputOutput->getOutputStream()->write($cipher->finishEncryption());
-
-        if ($signingOptions && $signingOptions->getSigningMode() === SigningMode::SIGN_THEN_ENCRYPT()) {
-            $inputOutput->getOutputStream()->write($cipher->packMessageInfoFooter());
-        }
-
-        return null; // we return null, since the result is not saved
-    }
-
-
-    /**
-     * Encrypts the given input using the provided recipients and signing options.
-     *
-     * @param mixed $inputOutput
+     * @param $inputOutput
      * @param VirgilPublicKeyCollection $recipients
      * @param SigningOptions|null $signingOptions
      *
      * @return null|string
      * @throws VirgilCryptoException
      */
-    public function encrypt(
-        mixed $inputOutput,
-        VirgilPublicKeyCollection $recipients,
-        SigningOptions $signingOptions = null
-    ): ?string {
+    public function encrypt($inputOutput, VirgilPublicKeyCollection $recipients, SigningOptions $signingOptions = null)
+    {
         try {
-            $cipher = $this->initializeCipher($recipients);
+
+            $aesGcm = new Aes256Gcm();
+            $cipher = new RecipientCipher();
+
+            $cipher->useEncryptionCipher($aesGcm);
+            $cipher->useRandom($this->getRandom());
+
+            foreach ($recipients->getAsArray() as $recipient) {
+                $cipher->addKeyRecipient($recipient->getIdentifier(), $recipient->getPublicKey());
+            }
+
             $this->startEncryption($cipher, $inputOutput, $signingOptions);
 
             return $this->processEncryption($cipher, $inputOutput, $signingOptions);
+
         } catch (Exception $e) {
             throw new VirgilCryptoException($e);
         }
     }
-
-    /**
-     * Initializes the RecipientCipher with the given recipients.
-     *
-     * @param VirgilPublicKeyCollection $recipients
-     * @return RecipientCipher
-     */
-    private function initializeCipher(VirgilPublicKeyCollection $recipients): RecipientCipher
-    {
-        $aesGcm = new Aes256Gcm();
-        $cipher = new RecipientCipher();
-
-        $cipher->useEncryptionCipher($aesGcm);
-        $cipher->useRandom($this->getRandom());
-
-        foreach ($recipients->getAsArray() as $recipient) {
-            $cipher->addKeyRecipient($recipient->getIdentifier(), $recipient->getPublicKey());
-        }
-
-        return $cipher;
-    }
-
 
     /**
      * @param RecipientCipher $cipher
@@ -490,26 +402,29 @@ class VirgilCryptoService
      * @return null|string
      * @throws VirgilCryptoException
      */
-    private function processDecryption(RecipientCipher $cipher, $inputOutput): ?string
+    private function processDecryption(RecipientCipher $cipher, $inputOutput)
     {
         try {
+
             $result = null;
 
             if (is_string($inputOutput)) {
                 $result = $cipher->processDecryption($inputOutput);
                 $result .= $cipher->finishDecryption();
-            } elseif ($inputOutput instanceof StreamInterface) {
-                $chunkClosure = function ($chunk) use ($cipher) {
-                    return $cipher->processDecryption($chunk);
-                };
+
+
+            } else if ($inputOutput instanceof StreamInterface) {
+                $chunkClosure = function ($chunk) use ($cipher) { return $cipher->processDecryption($chunk); };
 
                 StreamService::forEachChunk($inputOutput, $chunkClosure, true);
                 $inputOutput->getOutputStream()->write($cipher->finishDecryption());
+
             } else {
                 throw new VirgilCryptoException("Unsupported inputOutput type");
             }
 
             return $result;
+
         } catch (Exception $e) {
             throw new VirgilCryptoException($e);
         }
@@ -521,30 +436,26 @@ class VirgilCryptoService
      * @param string|null $result
      * @param VirgilPublicKeyCollection $publicKeys
      *
-     * @return void
+     * @return bool
      * @throws VirgilCryptoException
      */
-    private function verifyPlainSignature(
-        RecipientCipher $cipher,
-        $inputOutput,
-        VirgilPublicKeyCollection $publicKeys,
-        string $result = null
-    ): void {
+    private function verifyPlainSignature(RecipientCipher $cipher, $inputOutput, string $result = null,
+                                          VirgilPublicKeyCollection $publicKeys): bool
+    {
         try {
             $signerPublicKey = null;
 
-            if ($inputOutput instanceof StreamInterface) {
+            if ($inputOutput instanceof StreamInterface)
                 throw new VirgilCryptoException("signAndEncrypt is not supported for streams");
-            }
 
             if (1 == $publicKeys->getAmountOfKeys()) {
                 $signerPublicKey = $publicKeys->getFirst();
+
             } else {
                 $signerId = $cipher->customParams()->findData(self::CUSTOM_PARAM_KEY_SIGNER_ID);
 
-                if (!$signerId) {
+                if (!$signerId)
                     throw new VirgilCryptoException(VirgilCryptoError::SIGNER_NOT_FOUND());
-                }
 
                 foreach ($publicKeys->getAsArray() as $publicKey) {
                     if ($publicKey->getIdentifier() == $signerId) {
@@ -553,24 +464,22 @@ class VirgilCryptoService
                     }
                 }
 
-                if (!$signerPublicKey) {
+                if (!$signerPublicKey)
                     throw new VirgilCryptoException(VirgilCryptoError::SIGNER_NOT_FOUND());
-                }
             }
 
             $signature = $cipher->customParams()->findData(self::CUSTOM_PARAM_KEY_SIGNATURE);
 
-            if (!$signature) {
+            if (!$signature)
                 throw new VirgilCryptoException(VirgilCryptoError::SIGNATURE_NOT_FOUND());
-            }
 
             $result = $this->verifySignature($signature, $result, $signerPublicKey);
 
-            if (!$result) {
+            if (!$result)
                 throw new VirgilCryptoException(VirgilCryptoError::SIGNATURE_NOT_VERIFIED());
-            }
 
-            return;
+            return true;
+
         } catch (Exception $e) {
             throw new VirgilCryptoException($e);
         }
@@ -580,24 +489,22 @@ class VirgilCryptoService
      * @param RecipientCipher $cipher
      * @param VirgilPublicKeyCollection $publicKeys
      *
-     * @return void
+     * @return bool
      * @throws VirgilCryptoException
      */
-    private function verifyEncryptedSignature(RecipientCipher $cipher, VirgilPublicKeyCollection $publicKeys): void
+    private function verifyEncryptedSignature(RecipientCipher $cipher, VirgilPublicKeyCollection $publicKeys): bool
     {
         try {
             $signerPublicKey = null;
 
-            if (!$cipher->isDataSigned()) {
+            if (!$cipher->isDataSigned())
                 throw new VirgilCryptoException(VirgilCryptoError::DATA_IS_NOT_SIGNED());
-            }
 
             $signerInfoList = $cipher->signerInfos();
 
             $res = ($signerInfoList->hasItem() && !$signerInfoList->hasNext());
-            if (!$res) {
+            if (!$res)
                 throw new VirgilCryptoException(VirgilCryptoError::DATA_IS_NOT_SIGNED());
-            }
 
             $signerInfo = $signerInfoList->item();
 
@@ -608,93 +515,62 @@ class VirgilCryptoService
                 }
             }
 
-            if (!$signerPublicKey) {
+            if (!$signerPublicKey)
                 throw new VirgilCryptoException(VirgilCryptoError::SIGNER_NOT_FOUND());
-            }
 
             $result = $cipher->verifySignerInfo($signerInfo, $signerPublicKey);
 
-            if (!$result) {
+            if (!$result)
                 throw new VirgilCryptoException(VirgilCryptoError::SIGNATURE_NOT_VERIFIED());
-            }
 
-            return;
+            return true;
+
         } catch (Exception $e) {
             throw new VirgilCryptoException($e);
         }
     }
 
     /**
-     * Finishes the decryption process by verifying the signature if required.
-     *
      * @param RecipientCipher $cipher
-     * @param mixed $inputOutput
+     * @param $inputOutput
      * @param string|null $result
      * @param VerifyingOptions|null $verifyingOptions
      *
      * @throws VirgilCryptoException
      */
-    private function finishDecryption(
-        RecipientCipher $cipher,
-        mixed $inputOutput,
-        string $result = null,
-        VerifyingOptions $verifyingOptions = null
-    ): void {
+    private function finishDecryption(RecipientCipher $cipher, $inputOutput, string $result = null,
+                                      VerifyingOptions $verifyingOptions = null): void
+    {
         try {
+
             if ($verifyingOptions) {
-                $this->handleVerification($cipher, $inputOutput, $verifyingOptions, $result);
+
+                $mode = $verifyingOptions->getVerifyingMode();
+
+                if ($mode === VerifyingMode::ANY()) {
+                    $mode = $cipher->isDataSigned() ? VerifyingMode::DECRYPT_THEN_VERIFY(
+                    ) : VerifyingMode::DECRYPT_AND_VERIFY();
+                }
+
+                $publicKeys = $verifyingOptions->getVirgilPublicKeys();
+                switch ($mode) {
+                    case VerifyingMode::DECRYPT_AND_VERIFY():
+                        $this->verifyPlainSignature($cipher,  $inputOutput, $result, $publicKeys);
+                        break;
+
+                    case VerifyingMode::DECRYPT_THEN_VERIFY():
+                        $this->verifyEncryptedSignature($cipher, $publicKeys);
+                        break;
+                }
+
+            } else {
+                return;
             }
+
         } catch (Exception $e) {
             throw new VirgilCryptoException($e);
         }
     }
-
-    /**
-     * Handles the verification process based on the provided verifying options.
-     *
-     * @param RecipientCipher $cipher
-     * @param mixed $inputOutput
-     * @param string|null $result
-     * @param VerifyingOptions $verifyingOptions
-     * @throws VirgilCryptoException
-     */
-    private function handleVerification(
-        RecipientCipher $cipher,
-        mixed $inputOutput,
-        VerifyingOptions $verifyingOptions,
-        string $result = null
-    ): void {
-        $mode = $this->determineVerifyingMode($cipher, $verifyingOptions);
-
-        switch ($mode) {
-            case VerifyingMode::DECRYPT_AND_VERIFY():
-                $this->verifyPlainSignature($cipher, $inputOutput, $verifyingOptions->getVirgilPublicKeys(), $result);
-                break;
-
-            case VerifyingMode::DECRYPT_THEN_VERIFY():
-                $this->verifyEncryptedSignature($cipher, $verifyingOptions->getVirgilPublicKeys());
-                break;
-        }
-    }
-
-    /**
-     * Determines the verifying mode based on the cipher and verifying options.
-     *
-     * @param RecipientCipher $cipher
-     * @param VerifyingOptions $verifyingOptions
-     * @return VerifyingMode
-     */
-    private function determineVerifyingMode(RecipientCipher $cipher, VerifyingOptions $verifyingOptions): VerifyingMode
-    {
-        $mode = $verifyingOptions->getVerifyingMode();
-
-        if ($mode === VerifyingMode::ANY()) {
-            return $cipher->isDataSigned() ? VerifyingMode::DECRYPT_THEN_VERIFY() : VerifyingMode::DECRYPT_AND_VERIFY();
-        }
-
-        return $mode;
-    }
-
 
     /**
      * @param $inputOutput
@@ -708,6 +584,7 @@ class VirgilCryptoService
     $verifyingOptions = null): ?string
     {
         try {
+
             $messageInfo = "";
 
             $cipher = new RecipientCipher();
@@ -720,6 +597,7 @@ class VirgilCryptoService
             $this->finishDecryption($cipher, $inputOutput, $result, $verifyingOptions);
 
             return $result;
+
         } catch (Exception $e) {
             throw new VirgilCryptoException($e);
         }
@@ -771,20 +649,19 @@ class VirgilCryptoService
 
             $signer->reset();
 
-            $chunkClosure = function ($chunk) use ($signer) {
-                $signer->appendData($chunk);
-            };
+            $chunkClosure = function ($chunk) use ($signer) { $signer->appendData($chunk); };
             StreamService::forEachChunk($stream, $chunkClosure, false);
 
             return $signer->sign($virgilPrivateKey->getPrivateKey());
+
         } catch (Exception $e) {
             throw new VirgilCryptoException($e);
         }
     }
 
     /**
-     * Verifies the digital signature of a data stream.
-     * Note: Verification algorithm depends on the PublicKey type. Default: EdDSA.
+     * Verifies digital signature of data stream
+     * - Note: Verification algorithm depends on PublicKey type. Default: EdDSA
      *
      * @param string $signature
      * @param StreamInterface $inputStream
@@ -797,52 +674,22 @@ class VirgilCryptoService
         string $signature,
         StreamInterface $inputStream,
         VirgilPublicKey $virgilPublicKey
-    ): bool {
+    ): bool
+    {
         try {
-            return $this->performVerification($signature, $inputStream, $virgilPublicKey);
+            $verifier = new Verifier();
+
+            $verifier->reset($signature);
+
+            $chunkClosure = function ($chunk) use ($verifier) { $verifier->appendData($chunk); };
+            StreamService::forEachChunk($inputStream, $chunkClosure, false);
+
+            return $verifier->verify($virgilPublicKey->getPublicKey());
+
         } catch (Exception $e) {
             throw new VirgilCryptoException($e);
         }
     }
-
-    /**
-     * Performs the signature verification process.
-     *
-     * @param string $signature
-     * @param StreamInterface $inputStream
-     * @param VirgilPublicKey $virgilPublicKey
-     *
-     * @return bool
-     * @throws Exception
-     */
-    private function performVerification(
-        string $signature,
-        StreamInterface $inputStream,
-        VirgilPublicKey $virgilPublicKey
-    ): bool {
-        $verifier = new Verifier();
-        $verifier->reset($signature);
-
-        $this->appendChunksToVerifier($inputStream, $verifier);
-
-        return $verifier->verify($virgilPublicKey->getPublicKey());
-    }
-
-    /**
-     * Appends chunks of data from the input stream to the verifier.
-     *
-     * @param StreamInterface $inputStream
-     * @param Verifier $verifier
-     */
-    private function appendChunksToVerifier(StreamInterface $inputStream, Verifier $verifier): void
-    {
-        $chunkClosure = function ($chunk) use ($verifier) {
-            $verifier->appendData($chunk);
-        };
-
-        StreamService::forEachChunk($inputStream, $chunkClosure, false);
-    }
-
 
     /**
      * @param int $size
@@ -869,13 +716,22 @@ class VirgilCryptoService
      */
     public function computeHash(string $data, HashAlgorithms $algorithm): string
     {
-        $hash = match ((string)$algorithm) {
-            (string)$algorithm::SHA224() => new Sha224(),
-            (string)$algorithm::SHA256() => new Sha256(),
-            (string)$algorithm::SHA384() => new Sha384(),
-            (string)$algorithm::SHA512() => new Sha512(),
-            default => new Sha512(),
-        };
+        switch ($algorithm) {
+            case $algorithm::SHA224():
+                $hash = new Sha224();
+                break;
+            case $algorithm::SHA256():
+                $hash = new Sha256();
+                break;
+            case $algorithm::SHA384():
+                $hash = new Sha384();
+                break;
+            case $algorithm::SHA512():
+                $hash = new Sha512();
+                break;
+            default:
+                $hash = new Sha512();
+        }
 
         return $hash::hash($data);
     }
@@ -895,6 +751,7 @@ class VirgilCryptoService
             $keyProvider->setupDefaults();
 
             return $keyProvider->importPrivateKey($data);
+
         } catch (Exception $e) {
             throw new VirgilCryptoException($e);
         }
@@ -915,6 +772,7 @@ class VirgilCryptoService
             $keyProvider->setupDefaults();
 
             return $keyProvider->importPublicKey($data);
+
         } catch (Exception $e) {
             throw new VirgilCryptoException($e);
         }
@@ -947,6 +805,7 @@ class VirgilCryptoService
             $virgilPublicKey = new VirgilPublicKey($keyId, $publicKey, $keyType);
 
             return new VirgilKeyPair($virgilPrivateKey, $virgilPublicKey);
+
         } catch (Exception $e) {
             throw new VirgilCryptoException($e);
         }
@@ -967,6 +826,7 @@ class VirgilCryptoService
             $keyProvider->setupDefaults();
 
             return $keyProvider->exportPrivateKey($privateKey);
+
         } catch (Exception $e) {
             throw new VirgilCryptoException($e);
         }
@@ -1034,6 +894,7 @@ class VirgilCryptoService
             $keyId = $this->computePublicKeyIdentifier($publicKey);
 
             return new VirgilPublicKey($keyId, $publicKey, $keyType);
+
         } catch (Exception $e) {
             throw new VirgilCryptoException($e);
         }
@@ -1075,18 +936,17 @@ class VirgilCryptoService
     }
 
     /**
-     * Signs (with private key) and then encrypts data/stream (and signature) for passed PublicKeys.
-     * The process includes the following steps:
-     * 1. Generates signature depending on KeyType.
-     * 2. Generates random AES-256 KEY1.
-     * 3. Encrypts data with KEY1 using AES-256-GCM and generates signature.
-     * 4. Encrypts signature with KEY1 using AES-256-GCM.
-     * 5. Generates ephemeral key pair for each recipient.
-     * 6. Uses Diffie-Hellman to obtain shared secret with each recipient's public key & each ephemeral private key.
-     * 7. Computes KDF to obtain AES-256 key from shared secret for each recipient.
-     * 8. Encrypts KEY1 with this key using AES-256-CBC for each recipient.
+     * Signs (with private key) Then Encrypts data / stream (and signature) for passed PublicKeys
+     * 1. Generates signature depending on KeyType
+     * 2. Generates random AES-256 KEY1
+     * 3. Encrypts data with KEY1 using AES-256-GCM and generates signature
+     * 4. Encrypts signature with KEY1 using AES-256-GCM
+     * 5. Generates ephemeral key pair for each recipient
+     * 6. Uses Diffie-Hellman to obtain shared secret with each recipient's public key & each ephemeral private key
+     * 7. Computes KDF to obtain AES-256 key from shared secret for each recipient
+     * 8. Encrypts KEY1 with this key using AES-256-CBC for each recipient
      *
-     * @param mixed $inputOutput
+     * @param $inputOutput
      * @param VirgilPrivateKey $privateKey
      * @param VirgilPublicKeyCollection $recipients
      *
@@ -1094,46 +954,19 @@ class VirgilCryptoService
      * @throws VirgilCryptoException
      */
     public function authEncrypt(
-        mixed $inputOutput,
+        $inputOutput,
         VirgilPrivateKey $privateKey,
         VirgilPublicKeyCollection $recipients
-    ): ?string {
+    ): ?string
+    {
         try {
-            $signingOptions = $this->createSigningOptions($privateKey);
-            return $this->encryptData($inputOutput, $recipients, $signingOptions);
+            $signingOptions = new SigningOptions($privateKey, SigningMode::SIGN_THEN_ENCRYPT());
+            return $this->encrypt($inputOutput, $recipients, $signingOptions);
+
         } catch (Exception $e) {
             throw new VirgilCryptoException($e);
         }
     }
-
-    /**
-     * Creates signing options based on the provided private key.
-     *
-     * @param VirgilPrivateKey $privateKey
-     * @return SigningOptions
-     */
-    private function createSigningOptions(VirgilPrivateKey $privateKey): SigningOptions
-    {
-        return new SigningOptions($privateKey, SigningMode::SIGN_THEN_ENCRYPT());
-    }
-
-    /**
-     * Encrypts the provided data/stream with the specified recipients and signing options.
-     *
-     * @param mixed $inputOutput
-     * @param VirgilPublicKeyCollection $recipients
-     * @param SigningOptions $signingOptions
-     * @return null|string
-     * @throws VirgilCryptoException
-     */
-    private function encryptData(
-        mixed $inputOutput,
-        VirgilPublicKeyCollection $recipients,
-        SigningOptions $signingOptions
-    ): ?string {
-        return $this->encrypt($inputOutput, $recipients, $signingOptions);
-    }
-
 
     /**
      * Decrypts (with private key) data and signature and Verifies signature using any of signers' PublicKeys
@@ -1158,21 +991,18 @@ class VirgilCryptoService
      * @return null|string
      * @throws VirgilCryptoException
      */
-    public function authDecrypt(
-        $inputOutput,
-        VirgilPrivateKey $privateKey,
-        VirgilPublicKeyCollection $recipients,
-        bool $allowNotEncryptedSignature = false
-    ): ?string {
+    public function authDecrypt($inputOutput, VirgilPrivateKey $privateKey, VirgilPublicKeyCollection $recipients,
+                                bool $allowNotEncryptedSignature = false): ?string
+    {
         try {
             $verifyMode = $allowNotEncryptedSignature ? VerifyingMode::ANY() : VerifyingMode::DECRYPT_THEN_VERIFY();
             $verifyingOptions = new VerifyingOptions($recipients, $verifyMode);
 
             return $this->decrypt($inputOutput, $privateKey, $verifyingOptions);
+
         } catch (Exception $e) {
-            if ($e instanceof VirgilCryptoException) {
+            if ($e instanceof VirgilCryptoException)
                 throw $e;
-            }
 
             throw new VirgilCryptoException($e);
         }
